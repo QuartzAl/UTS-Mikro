@@ -82,15 +82,16 @@ void loop() {
         lcd.clear();
       }else if (input == "**"){
         storedPassword = "";
-        Serial.println("Masukkan password baru (3 digit):");
+        lcd.print("Masukkan password baru (3 digit):");
         setPasswordMode = true; // Masuk ke mode pengaturan password
 
         // TODO: set system for changing password
       }else if (setPasswordMode){
       // Pengguna sedang dalam mode pengaturan password
       storedPassword += input;
-      Serial.print("Password yang diinput: ");
-      Serial.println(storedPassword);}
+      lcd.print("Password yang diinput: ");
+      lcd.setCursor(0,1);
+      lcd.print(storedPassword);}
       else{
         lcd.clear();
         lcd.print("Not valid command");
