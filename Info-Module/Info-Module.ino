@@ -38,7 +38,7 @@
 #include <Wire.h>
 #include <SoftwareSerial.h>
 #include <LiquidCrystal.h>
-String storedPassword "123"
+String storedPassword = "123";
 
 LiquidCrystal lcd(7, 6, 5, 4, 3, 2);  // Pins for LCD
 const int pingSensorPin = 12;
@@ -51,6 +51,8 @@ bool inputMode = false;
 char keypadPress;
 int distance;
 String input;
+bool setPasswordMode = false; // Mode pengaturan password
+
 
 SoftwareSerial InfoComms(rxPin, txPin);
 
@@ -130,7 +132,7 @@ void loop() {
           displayLoginMenu();
 
         } else if (keypadPress == '#') {
-          if (input == STORED_PASSWORD) {
+          if (input == storedPassword) {
             loggedIn = true;
             input = "";
             lcd.clear();
