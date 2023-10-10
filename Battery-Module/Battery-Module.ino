@@ -1,5 +1,9 @@
 #include <Wire.h>
 
+
+
+
+
 const int redLEDPin = 10;  // Pin untuk LED merah
 const int redPin = 6;      // Pin untuk komponen merah LED RGB
 const int greenPin = 3;    // Pin untuk komponen hijau LED RGB
