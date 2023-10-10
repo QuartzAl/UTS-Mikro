@@ -144,9 +144,9 @@ void loop() {
   // input mode: INPUT OLD PASSWORD
   else if (inputMode == 1) {
     if (input.length() < (PASSWORD_LENGTH - 1)) {
-      input += keypadPress;
+      input += lockerInfo;
     } else {
-      input += keypadPress;
+      input += lockerInfo;
       if (storedPassword.equals(input)) {
         lcd.clear();
         lcd.print("New pass:");
@@ -160,9 +160,9 @@ void loop() {
   // input mode: INPUT NEW PASSWORD
   else if (inputMode == 2) {
     if (input.length() < (PASSWORD_LENGTH - 1)) {
-      input += keypadPress;
+      input += lockerInfo;
     } else {
-      input += keypadPress;
+      input += lockerInfo;
       lcd.clear();
       lcd.print("Confirm pass:");
       lcd.setCursor(0, 1);
@@ -175,9 +175,9 @@ void loop() {
   // input mode: CONFIRM NEW PASSWORD
   else if (inputMode == 3) {
     if (input.length() < (PASSWORD_LENGTH - 1)) {
-      input += keypadPress;
+      input += lockerInfo;
     } else {
-      input += keypadPress;
+      input += lockerInfo;
       if (storedPassword.equals(input)) {
         lcd.clear();
         lcd.print("Password change");
@@ -193,15 +193,14 @@ void loop() {
   }
   // input mode: MAIN MENU
   else if (inputMode == 4) {
-    if (keypadPress == '#') {
+    if (lockerInfo == '#') {
 
       // logic for closing vault
       if (input == "*") {
         input = "";
-        loggedIn = false;
-        lcdActive = false;
+        inputMode = 0;
+        disableDisplay();
         closeLocker();
-        lcd.clear();
 
         // Enter Password change mode
       } else if (input == "**") {
@@ -219,8 +218,8 @@ void loop() {
       }
 
     } else {
-      input += keypadPress;
-      lcd.print(keypadPress);
+      input += lockerInfo;
+      lcd.print(lockerInfo);
     }
   }
 }
@@ -279,7 +278,4 @@ void enableKeypad() {
 }
 void disableKeypad() {
   InfoComms.print('D');
-}
-void shutDownSystem() {
-  InfoComms.print("DC");
 }
