@@ -38,7 +38,8 @@
 #include <Wire.h>
 #include <SoftwareSerial.h>
 #include <LiquidCrystal.h>
-String storedPassword = "123";
+#define PASSWORD_LENGTH 3
+
 
 LiquidCrystal lcd(7, 6, 5, 4, 3, 2);  // Pins for LCD
 const int pingSensorPin = 12;
@@ -46,12 +47,21 @@ const int pirSensorPin = 11;
 const byte rxPin = 8;
 const byte txPin = 9;
 bool lcdActive = false;
-bool loggedIn;
-bool inputMode = false;
-char keypadPress;
+char lockerInfo;
 int distance;
 String input;
-bool setPasswordMode = false; // Mode pengaturan password
+String tempPassword;
+String storedPassword = "123";
+
+/*
+STATUS MODES
+- login				          0  
+- input old password		1  logged in
+- input new password		2  logged in
+- confirm new password  3  logged in
+- main menu			        4  logged in
+*/
+int inputMode = 0;
 
 
 SoftwareSerial InfoComms(rxPin, txPin);
@@ -65,110 +75,154 @@ void setup() {
 }
 
 void loop() {
+  delay(10);
   // TODO: setup wire communication with battery
-  // TODO: Check fire status before anything
-  
 
-  if (loggedIn) {
-    keypadPress = InfoComms.read();
-    if (keypadPress == '#'){
+  distance = readPingSensor();
+  if (distance <= 50 && !lcdActive) {
+    enableDisplay();
+    displayLoginMenu();
+    enableKeypad();
+    input = "";
 
-      // logic for closing vault
-      if (input == "*"){
-        input = "";
-        loggedIn = false;
-        lcdActive = false;
-        closeLocker();
-        lcd.clear();
-      }else if (input == "**"){
-        storedPassword = "";
-        lcd.print("Masukkan password baru (3 digit):");
-        setPasswordMode = true; // Masuk ke mode pengaturan password
-
-        // TODO: set system for changing password
-      }else if (setPasswordMode){
-      // Pengguna sedang dalam mode pengaturan password
-      storedPassword += input;
-      lcd.print("Password yang diinput: ");
-      lcd.setCursor(0,1);
-      lcd.print(storedPassword);}
-      else{
-        lcd.clear();
-        lcd.print("Not valid command");
-        delay(500);
-        lcd.clear();
-        lcd.print("*#: Close vault");
-        lcd.setCursor(0,1);
-        lcd.print("**#: Change Pass");
-        input = "";
-      }
-    }else{
-      if(!inputMode){
-        lcd.clear();
-        input = "";
-        inputMode = true;
-      }
-      input += keypadPress;
-      lcd.print(keypadPress);
-
-    }
-
-  } else {
-    distance = readPingSensor();
-    if (distance <= 50) {
-      if (!lcdActive) {    // If LCD was off
-        lcd.begin(16, 2);  // Reinitialize LCD
-        Serial.println("LCD On");
-        displayLoginMenu();
-        input = "";
-        enableKeypad();
-        lcdActive = true;
-      }
-
-      if (InfoComms.available() > 0) {
-        keypadPress = InfoComms.read();
-        Serial.println(keypadPress);
-        if (keypadPress == '*') {
-          input = "";
-          displayLoginMenu();
-
-        } else if (keypadPress == '#') {
-          if (input == storedPassword) {
-            loggedIn = true;
-            input = "";
-            lcd.clear();
-            lcd.println("*#: Close vault");
-            lcd.print("**#: Change Password");
-
-          } else {
-            lcd.clear();
-            lcd.print("Incorrect Password!");
-            delay(1000);
-            displayLoginMenu();
-          }
-
-        } else {
-          lcd.print(keypadPress);
-          input += keypadPress;
-        }
-      }
-    } else {
-      if (lcdActive) {    // If LCD was on
-        lcd.noDisplay();  // Turn off LCD display
-        lcdActive = false;
-        Serial.println("LCD Off");
-        disableKeypad();
-      }
-    }
+  } else {  // If LCD was on
+    disableDisplay();
+    disableKeypad();
   }
-
-
 
   if (digitalRead(pirSensorPin) == HIGH) {
     Serial.println("Warning: Ada orang disekitar brankas!");
   }
 
-  delay(1000);
+
+  if (InfoComms.available() == 0) { return; }
+
+  lockerInfo = InfoComms.read();
+  Serial.println(lockerInfo);
+
+  // Check fire status before anything
+  if (lockerInfo == '!') {
+    Serial.println("Kebakaran!");
+    closeLocker();
+    disableKeypad();
+    disableDisplay();
+    return;
+  }
+
+
+  // input mode: LOGIN
+  if (inputMode == 0) {
+
+    // Clear password input
+    if (lockerInfo == '*') {
+      input = "";
+      displayLoginMenu();
+
+      // Enter password input
+    } else if (lockerInfo == '#') {
+
+      if (input == storedPassword) {
+        inputMode = 4;
+        lcd.clear();
+        displayMainMenu();
+      } else {
+        lcd.clear();
+        lcd.print("Incorrect Password!");
+        delay(1000);
+        displayLoginMenu();
+      }
+      input = "";
+
+      // Input Characters
+    } else {
+      lcd.print(lockerInfo);
+      input += lockerInfo;
+    }
+
+
+  }
+  // input mode: INPUT OLD PASSWORD
+  else if (inputMode == 1) {
+    if (input.length() < (PASSWORD_LENGTH - 1)) {
+      input += keypadPress;
+    } else {
+      input += keypadPress;
+      if (storedPassword.equals(input)) {
+        lcd.clear();
+        lcd.print("New pass:");
+        lcd.setCursor(0, 1);
+        inputMode = 2;
+        input = "";
+      }
+    }
+
+  }
+  // input mode: INPUT NEW PASSWORD
+  else if (inputMode == 2) {
+    if (input.length() < (PASSWORD_LENGTH - 1)) {
+      input += keypadPress;
+    } else {
+      input += keypadPress;
+      lcd.clear();
+      lcd.print("Confirm pass:");
+      lcd.setCursor(0, 1);
+      inputMode = 3;
+      tempPassword = input;
+      input = "";
+    }
+
+  }
+  // input mode: CONFIRM NEW PASSWORD
+  else if (inputMode == 3) {
+    if (input.length() < (PASSWORD_LENGTH - 1)) {
+      input += keypadPress;
+    } else {
+      input += keypadPress;
+      if (storedPassword.equals(input)) {
+        lcd.clear();
+        lcd.print("Password change");
+        lcd.setCursor(0,1);
+        lcd.print("Success!");
+        delay(1000);
+        displayMainMenu();
+        inputMode = 4;
+        input = "";
+      }
+    }
+
+  }
+  // input mode: MAIN MENU
+  else if (inputMode == 4) {
+    if (keypadPress == '#') {
+
+      // logic for closing vault
+      if (input == "*") {
+        input = "";
+        loggedIn = false;
+        lcdActive = false;
+        closeLocker();
+        lcd.clear();
+
+        // Enter Password change mode
+      } else if (input == "**") {
+        lcd.print("Enter old pass:");
+        lcd.setCursor(0, 1);
+        inputMode = 1;
+        input = "";
+
+      } else {
+        lcd.clear();
+        lcd.print("Not valid command");
+        delay(500);
+        displayMainMenu();
+        input = "";
+      }
+
+    } else {
+      input += keypadPress;
+      lcd.print(keypadPress);
+    }
+  }
 }
 
 int readPingSensor() {
@@ -189,7 +243,7 @@ int readPingSensor() {
   return distance;
 }
 
-void displayLoginMenu(){
+void displayLoginMenu() {
   lcd.cursor();
   lcd.blink();
   lcd.clear();
@@ -197,8 +251,21 @@ void displayLoginMenu(){
   lcd.setCursor(0, 1);
   lcd.print("Password: ");
 }
-void displayMainMenu(){
-  
+void displayMainMenu() {
+  lcd.clear();
+  lcd.print("*#: Close vault");
+  lcd.setCursor(0, 1);
+  lcd.print("**#: Change Pass");
+}
+void disableDisplay() {
+  lcd.noDisplay();  // Turn off LCD display
+  Serial.println("LCD Off");
+  lcdActive = false;
+}
+void enableDisplay() {
+  lcd.begin(16, 2);  // Reinitialize LCD
+  Serial.println("LCD On");
+  lcdActive = true;
 }
 
 void closeLocker() {
