@@ -10,12 +10,14 @@ const int potentiometerPin = A0;       // Pin untuk membaca potensiometer
 const int simulatorPower = 2;          // Pin untuk membaca saklar
 const float fullBatteryVoltage = 5.0;  // Tegangan penuh baterai
 const float minBatteryVoltage = 4.0;   // Tegangan minimum baterai untuk pengisian
+bool approved = false;
 
 void setup() {
   pinMode(2, INPUT_PULLUP);                                              // Konfigurasi pin sebagai input dengan internal pull-up resistor untuk sinyal interrupt
   attachInterrupt(digitalPinToInterrupt(2), powerCutInterrupt, CHANGE);  // Attach interrupt untuk mendeteksi perubahan pada pin-2
   Wire.begin(8);                                                         // Inisialisasi komunikasi I2C, dengan alamat I2C modul "Power" (misalnya, 8)
-  Wire.onReceive(requestEvent);                                          // Mengatur fungsi yang akan dipanggil saat permintaan I2C diterima
+  Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);                                          // Mengatur fungsi yang akan dipanggil saat permintaan I2C diterima
   Serial.begin(9600);
   pinMode(10, OUTPUT);
   pinMode(6, OUTPUT);
@@ -23,6 +25,7 @@ void setup() {
   pinMode(4, OUTPUT);
   pinMode(3, OUTPUT);
   pinMode(simulatorPower, INPUT_PULLUP);
+  powerCutInterrupt();
 }
 
 void loop() {
@@ -51,7 +54,7 @@ void loop() {
     digitalWrite(4, HIGH);
   }
 }
-void requestEvent(int bytes) {
+void receiveEvent(int bytes) {
   if (bytes == 3) {
     char received[4];
     int i = 0;
@@ -61,20 +64,25 @@ void requestEvent(int bytes) {
     }
     received[i] = '\0';  // Add null terminator to end of string
 
-    if (strcmp(received, "PWR") != 0) {
-      return;
+    if (strcmp(received, "PWR") == 0) {
+      approved = true;
     }
   }
+}
 
+void requestEvent() {
+  if (!approved) { return; }
   int sensorValue = analogRead(A0);
   float voltage = sensorValue * (5.0 / 1023.0);
-  Serial.println("Sent Voltage: " + String(voltage) + "V");
-  if (powerCutStatus == 0) {
-    Wire.write(String(voltage).c_str());
-  } else {
-    // Power-cut AKTIF, kirim pesan "0.0"
-    Wire.write(String(voltage).c_str());
+  String voltageString = String(voltage, 1);
+  Serial.println("Sent Voltage: " + voltageString + "V");
+  
+  if (powerCutStatus == 1){
+    Wire.write(voltageString.c_str());
+  }else{
+    Wire.write("0.0");
   }
+  approved = false;
 }
 
 void types(String a) {

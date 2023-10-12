@@ -47,7 +47,7 @@ void setup() {
 void loop() {
   delay(50);
 
- int bytesReceived = 0;  // Inisialisasi bytesReceived ke 0
+  int bytesReceived = 0;  // Inisialisasi bytesReceived ke 0
 
   // Wire communication with battery
   currentTime = millis();
@@ -56,18 +56,17 @@ void loop() {
     Wire.write("PWR");
     Wire.endTransmission();
     lastSendTime = currentTime;
-    Serial.println("send request");
     Wire.requestFrom(8, 3);  // Request data from the slave
-    bytesReceived = Wire.available();  // Update bytesReceived
-  }
-  
-  if (bytesReceived > 0) {
     String responseString = "";
     while (Wire.available()) {
       char receivedChar = Wire.read();
       responseString += receivedChar;
     }
-    Serial.println("Received: " + responseString);  // Print the received data
+    if (responseString == "0.0"){
+      systemShutdown();
+    }
+    
+    Serial.println("Battery Voltage: " + responseString);  // Update bytesReceived
   }
 
   distance = readPingSensor();
@@ -77,8 +76,7 @@ void loop() {
     enableKeypad();
     input = "";
   } else if (distance > 50 && lcdActive) {  // If LCD was on
-    disableDisplay();
-    disableKeypad();
+    systemShutdown();
   }
 
   if (digitalRead(pirSensorPin) == HIGH) {
@@ -95,13 +93,10 @@ void loop() {
   // Check fire status before anything
   if (lockerInfo == '!') {
     Serial.println("Kebakaran!");
-    closeLocker();
-    disableKeypad();
-    disableDisplay();
+    systemShutdown();
     return;
   }
 
-  Serial.println("Mode: " + inputMode);
   // input mode: LOGIN
   if (inputMode == STATUS_LOGIN) {
 
@@ -114,9 +109,8 @@ void loop() {
     } else if (lockerInfo == '#') {
 
       if (input == storedPassword) {
-        inputMode = 4;
-        lcd.clear();
         displayPrompt(STATUS_MAIN_MENU, false);
+        openLocker();
         input = "";
       } else {
         lcd.clear();
@@ -224,7 +218,7 @@ void loop() {
       }
     } else if (lockerInfo == '*') {
       input = "";
-      displayPrompt(STATUS_CONFIRM_NEW_PASS, false);
+      displayPrompt(STATUS_CONFIRM_NEW_PASS, true);
     } else {
       input += lockerInfo;
       lcd.print(lockerInfo);
@@ -283,4 +277,10 @@ void enableKeypad() {
 }
 void disableKeypad() {
   InfoComms.print('D');
+}
+
+void systemShutdown(){
+  InfoComms.print('CD');
+  disableDisplay();
+  inputMode = STATUS_LOGIN;
 }

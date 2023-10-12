@@ -20,6 +20,7 @@ bool allowed = true;
 char charInput;
 char keyInput;
 
+
 //keymap defines the key pressed according to the row and columns just as appears on the keypad
 char keymap[numRows][numCols]=
 {
@@ -41,10 +42,11 @@ void setup(){
   pinMode(alarm, OUTPUT);
   Serial.begin(9600);
   InfoComms.begin(4800);
+  myservo.attach(13);
 }
 
 void loop(){
-  delay(10);
+  delay(50);
   keyInput = myKeypad.getKey();
   
   if (allowed && keyInput != NO_KEY){
