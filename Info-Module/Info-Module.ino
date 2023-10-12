@@ -1,3 +1,4 @@
+/* INFO MODULE ARDUINO 1*/
 #include <Wire.h>
 #include <SoftwareSerial.h>
 #include <LiquidCrystal.h>
@@ -28,11 +29,14 @@ String input;
 String tempPassword;
 String storedPassword = "123";
 int inputMode = 0;
+unsigned long lastSendTime = 0;
+unsigned long currentTime = 0;
 
 SoftwareSerial InfoComms(rxPin, txPin);
 LiquidCrystal lcd(7, 6, 5, 4, 3, 2);  // Pins for LCD
 
 void setup() {
+  Wire.begin();
   lcd.begin(16, 2);
   pinMode(pingSensorPin, INPUT);
   pinMode(pirSensorPin, INPUT);
@@ -42,7 +46,29 @@ void setup() {
 
 void loop() {
   delay(50);
-  // TODO: setup wire communication with battery
+
+ int bytesReceived = 0;  // Inisialisasi bytesReceived ke 0
+
+  // Wire communication with battery
+  currentTime = millis();
+  if (currentTime - lastSendTime > 1000) {
+    Wire.beginTransmission(8);
+    Wire.write("PWR");
+    Wire.endTransmission();
+    lastSendTime = currentTime;
+    Serial.println("send request");
+    Wire.requestFrom(8, 3);  // Request data from the slave
+    bytesReceived = Wire.available();  // Update bytesReceived
+  }
+  
+  if (bytesReceived > 0) {
+    String responseString = "";
+    while (Wire.available()) {
+      char receivedChar = Wire.read();
+      responseString += receivedChar;
+    }
+    Serial.println("Received: " + responseString);  // Print the received data
+  }
 
   distance = readPingSensor();
   if (distance <= 50 && !lcdActive) {
@@ -75,6 +101,7 @@ void loop() {
     return;
   }
 
+  Serial.println("Mode: " + inputMode);
   // input mode: LOGIN
   if (inputMode == STATUS_LOGIN) {
 

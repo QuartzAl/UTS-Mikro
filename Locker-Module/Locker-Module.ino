@@ -1,47 +1,4 @@
-
-
-// Arduino Uno R3 ke-2
-/* ********** Modul Locker ************
-
-Modul Locker ini memiliki tugas:
-1. Membaca input keypad dan mengirimkannya via Software Serial 
-   ke modul Info. Catatan: untuk SoftwareSerial, gunakan 
-   baudrate 4800
-   Perhatikan bahwa modul "Locker" ini seharusnya TIDAK membaca
-   keypad jika LCD dalam posisi mati (modul "Info" seharusnya
-   mengirim status/kondisi ini ke modul "Locker")
-   Modul "Locker" ini TIDAK PERLU mengirimkan data apapun
-   via serial-USB ke komputer (tapi silahkan/boleh dipakai untuk
-   proses debugging)
-2. Mendeteksi kebakaran dengan sensor suhu DAN sensor asap.
-   - Kebakaran dianggap terjadi jika KEDUA sensor tersebut aktif
-   - Jika kebakaran terjadi:
-     1. Nyalakan alarm/buzzer
-     2. Servo dikembalikan pada posisi tertutup (jika saat itu
-        dia terbuka)
-     3. Kirimkan notifikasi ke modul "Info" bahwa telah terjadi
-        kebakaran (dimana nantinya modul "Info" akan mem-forward
-        informasi kebakaran ini ke pengguna/pemilik lewat 
-        Serial-USB)
-3. Membuka dan menutup servo sesuai perintah dari modul Info,
-   KECUALI jika terjadi kebakaran (akan langsung/tetap menutup)
-4. Ada kemungkinan modul "Info" akan mengirim perintah untuk
-   shutdown sistem secara keseluruhan. Jika ini terjadi, maka
-   modul "Locker" ini harus menutup servo (jika dalam kondisi 
-   terbuka).
-
-Arduino ini bertugas untuk membaca masukan dari keypad. 
-Perhatikan fungsi-fungsi penting keypad berikut (yang akan 
-diproses oleh modul Info):
-   '#' -> tombol Enter (setelah memasukkan digit-digit password
-   '*' -> jika ditekan pada saat sedang memasukkan password,
-           maka digit-digit yang sudah dimasukkan akan dihapus
-           (clear) dan akan diulang dari awal lagi
-   '*#' -> menutup brankas (jika sudah berhasil login)
-   '**#' -> untuk mereset password (harus sudah login)
-
-*/
-
+/* LOCKER MODULE ARDUINO 2*/
 #include <SoftwareSerial.h>
 #include <Keypad.h>
 #include <Servo.h>
@@ -62,7 +19,6 @@ float temperatureVal;
 bool allowed = true;
 char charInput;
 char keyInput;
-
 
 //keymap defines the key pressed according to the row and columns just as appears on the keypad
 char keymap[numRows][numCols]=
